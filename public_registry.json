@@ -258,7 +258,7 @@
       "version": "latest",
       "description": "CLI for generating music with Suno AI from lyrics and style prompts, with batch generation, status polling, downloads, and automatic MP3 tagging",
       "category": "music",
-      "requires": "Python 3 and a Suno API key from sunoapi.org",
+      "requires": "Python 3 and an API key from sunoapi.org (a third-party reseller, not Suno itself)",
       "homepage": "https://github.com/slauger/suno-cli",
       "source_url": "https://github.com/slauger/suno-cli",
       "package_manager": "pip",
