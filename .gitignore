@@ -280,6 +280,8 @@
 !/calibre/agent-harness/
 !/safari/
 !/safari/agent-harness/
+!/whatsapp/
+!/whatsapp/agent-harness/
 !/unrealinsights/agent-harness/
 !/firefly-iii/agent-harness/
 !/nsight-graphics/agent-harness/
