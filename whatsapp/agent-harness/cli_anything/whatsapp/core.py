@@ -47,21 +47,59 @@ def _digits(value):
     return re.sub(r"\D", "", value or "")
 
 
-def load_contacts():
-    conn = _connect("ContactsV2.sqlite")
+def _query(name, sql):
     try:
-        rows = conn.execute(
-            "SELECT ZFULLNAME, ZGIVENNAME, ZBUSINESSNAME, ZWHATSAPPID FROM ZWAADDRESSBOOKCONTACT "
-            "WHERE ZWHATSAPPID LIKE '%@s.whatsapp.net'"
-        ).fetchall()
+        conn = _connect(name)
+    except WhatsAppError:
+        return []
+    try:
+        return conn.execute(sql).fetchall()
+    except sqlite3.Error:
+        return []
     finally:
         conn.close()
+
+
+def load_contacts():
+    """Address-book contacts, plus 1:1 chats with people who aren't in the address book.
+
+    Most chats are keyed by a privacy ID (``...@lid``) rather than a phone
+    number. The number comes from the address book or, failing that, from
+    WhatsApp's LID.sqlite account table.
+    """
+    book = _query(
+        "ContactsV2.sqlite",
+        "SELECT ZFULLNAME, ZGIVENNAME, ZBUSINESSNAME, ZWHATSAPPID, ZLID FROM ZWAADDRESSBOOKCONTACT "
+        "WHERE ZWHATSAPPID LIKE '%@s.whatsapp.net'",
+    )
     contacts = {}
-    for full, given, business, jid in rows:
+    lid_phone = {}
+    for full, given, business, jid, lid in book:
         name = full or given or business
         phone = _digits(jid.split("@")[0])
+        if lid and phone:
+            lid_phone[lid] = phone
         if name and phone:
             contacts[phone] = Contact(name=name.strip(), phone=phone)
+
+    for lid, number in _query("LID.sqlite", "SELECT ZIDENTIFIER, ZPHONENUMBER FROM ZWAZACCOUNT WHERE ZPHONENUMBER IS NOT NULL"):
+        lid_phone.setdefault(lid, _digits(number))
+
+    chats = _query(
+        "ChatStorage.sqlite",
+        "SELECT ZCONTACTJID, ZPARTNERNAME FROM ZWACHATSESSION "
+        "WHERE ZSESSIONTYPE = 0 AND ZREMOVED = 0 AND ZPARTNERNAME IS NOT NULL",
+    )
+    for jid, name in chats:
+        if jid.endswith("@s.whatsapp.net"):
+            phone = _digits(jid.split("@")[0])
+        else:
+            phone = lid_phone.get(jid)
+        if phone and name.strip() and phone not in contacts:
+            contacts[phone] = Contact(name=name.strip(), phone=phone)
+
+    if not contacts and not book and not chats:
+        raise WhatsAppError(f"No WhatsApp data found in {data_dir()}. Is WhatsApp for Mac installed and signed in?")
     return sorted(contacts.values(), key=lambda c: c.name.lower())
 
 

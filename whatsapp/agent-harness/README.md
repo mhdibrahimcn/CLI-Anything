@@ -6,7 +6,10 @@ device or use an unofficial WhatsApp client.
 
 ## How it works
 
-1. Looks the contact up in WhatsApp's local contacts database (read-only).
+1. Looks the person up in WhatsApp's local databases (read-only): your synced
+   address book, plus everyone you have a one-to-one chat with. Most chats are
+   stored under a privacy ID instead of a number; the number comes from
+   WhatsApp's `LID.sqlite`.
 2. Opens `whatsapp://send?phone=<number>&text=<message>`, which opens that
    chat in WhatsApp with the message typed in.
 3. Presses Return in WhatsApp.
@@ -49,8 +52,10 @@ Tools: `send_message(to, message, dry_run=False)` and `find_contact(query)`.
 
 ## Limits
 
-- Contacts only: names come from WhatsApp's synced address book. Any number
-  works if you type it with its country code.
+- Names come from your address book, or the chat name for people who aren't
+  in it. Any number works if you type it with its country code.
+- Two different people with the exact same name can't be told apart by name.
+  Use the number.
 - No groups. WhatsApp's URL scheme can only open chats by phone number.
 - WhatsApp comes to the front while sending, and it takes about 2 seconds.
 - Text only, no attachments.

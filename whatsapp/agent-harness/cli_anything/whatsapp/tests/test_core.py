@@ -10,26 +10,45 @@ from cli_anything.whatsapp import core
 from cli_anything.whatsapp.whatsapp_cli import cli
 
 CONTACTS = [
-    ("Asha Rao", "Asha", None, "919800000001@s.whatsapp.net"),
-    ("Asha Menon", "Asha", None, "919800000002@s.whatsapp.net"),
-    ("Bilal Khan", "Bilal", None, "447700900003@s.whatsapp.net"),
-    (None, None, "Corner Bakery", "14155550004@s.whatsapp.net"),
-    ("Group-ish", None, None, "1203630000@g.us"),
+    ("Asha Rao", "Asha", None, "919800000001@s.whatsapp.net", "111@lid"),
+    ("Asha Menon", "Asha", None, "919800000002@s.whatsapp.net", None),
+    ("Bilal Khan", "Bilal", None, "447700900003@s.whatsapp.net", None),
+    (None, None, "Corner Bakery", "14155550004@s.whatsapp.net", None),
+    ("Group-ish", None, None, "1203630000@g.us", None),
 ]
+
+# (Z_PK, jid, session type, removed, partner name)
+CHATS = [
+    (1, "447700900003@s.whatsapp.net", 0, 0, "Bilal K"),
+    (2, "111@lid", 0, 0, "Asha (work)"),
+    (3, "222@lid", 0, 0, "Dev Patel"),
+    (4, "333@lid", 0, 0, "No Number"),
+    (5, "1203630000@g.us", 1, 0, "Family"),
+    (6, "444@lid", 0, 1, "Deleted Chat"),
+    (7, "491700000005@s.whatsapp.net", 0, 0, "Erik"),
+]
+
+# LID.sqlite account rows: (lid, phone)
+ACCOUNTS = [("222@lid", "+44 7700 900006"), ("444@lid", "4915100000007")]
 
 
 @pytest.fixture
 def data(tmp_path, monkeypatch):
     monkeypatch.setenv("WA_DATA_DIR", str(tmp_path))
     c = sqlite3.connect(tmp_path / "ContactsV2.sqlite")
-    c.execute("CREATE TABLE ZWAADDRESSBOOKCONTACT (ZFULLNAME, ZGIVENNAME, ZBUSINESSNAME, ZWHATSAPPID)")
-    c.executemany("INSERT INTO ZWAADDRESSBOOKCONTACT VALUES (?,?,?,?)", CONTACTS)
+    c.execute("CREATE TABLE ZWAADDRESSBOOKCONTACT (ZFULLNAME, ZGIVENNAME, ZBUSINESSNAME, ZWHATSAPPID, ZLID)")
+    c.executemany("INSERT INTO ZWAADDRESSBOOKCONTACT VALUES (?,?,?,?,?)", CONTACTS)
+    c.commit()
+    c.close()
+    c = sqlite3.connect(tmp_path / "LID.sqlite")
+    c.execute("CREATE TABLE ZWAZACCOUNT (ZIDENTIFIER, ZPHONENUMBER)")
+    c.executemany("INSERT INTO ZWAZACCOUNT VALUES (?,?)", ACCOUNTS)
     c.commit()
     c.close()
     c = sqlite3.connect(tmp_path / "ChatStorage.sqlite")
-    c.execute("CREATE TABLE ZWACHATSESSION (Z_PK INTEGER PRIMARY KEY, ZCONTACTJID)")
+    c.execute("CREATE TABLE ZWACHATSESSION (Z_PK INTEGER PRIMARY KEY, ZCONTACTJID, ZSESSIONTYPE, ZREMOVED, ZPARTNERNAME)")
     c.execute("CREATE TABLE ZWAMESSAGE (ZCHATSESSION, ZISFROMME, ZTEXT, ZMESSAGEDATE)")
-    c.execute("INSERT INTO ZWACHATSESSION VALUES (1, '447700900003@s.whatsapp.net')")
+    c.executemany("INSERT INTO ZWACHATSESSION VALUES (?,?,?,?,?)", CHATS)
     c.commit()
     c.close()
     return tmp_path
@@ -81,6 +100,32 @@ def test_contacts_skip_groups_and_use_business_name(data):
     names = [c.name for c in core.load_contacts()]
     assert "Corner Bakery" in names
     assert "Group-ish" not in names
+
+
+def test_chat_without_contact_uses_lid_account_number(data):
+    assert core.resolve("Dev Patel").phone == "447700900006"
+
+
+def test_chat_with_phone_jid_and_no_contact(data):
+    assert core.resolve("erik").phone == "491700000005"
+
+
+def test_contact_name_wins_over_chat_name(data):
+    names = {c.phone: c.name for c in core.load_contacts()}
+    assert names["447700900003"] == "Bilal Khan"
+    assert names["919800000001"] == "Asha Rao"
+
+
+def test_chats_without_number_groups_and_deleted_are_skipped(data):
+    names = {c.name for c in core.load_contacts()}
+    assert not names & {"No Number", "Family", "Deleted Chat"}
+
+
+def test_works_without_lid_database(data):
+    (data / "LID.sqlite").unlink()
+    with pytest.raises(core.WhatsAppError, match="No WhatsApp contact"):
+        core.resolve("Dev Patel")
+    assert core.resolve("Bilal Khan").phone == "447700900003"
 
 
 def test_resolve_by_unique_name(data):
