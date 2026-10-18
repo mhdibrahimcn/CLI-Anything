@@ -13,7 +13,7 @@ Skill content source lookup chain:
 2. Bundled package data: ``cli_hub/_matrix_data/<name>/`` (shipped in
    wheels/sdists built from a checkout; absent in editable installs, which
    hit the checkout in step 1 instead).
-3. Published URL: ``https://hkuds.github.io/CLI-Anything/matrix/<name>/SKILL.md``
+3. Published URL: ``https://raw.githubusercontent.com/mhdibrahimcn/CLI-Anything/main/cli-hub-matrix/<name>/SKILL.md``
    (SKILL.md only; references/scripts stay remote and are linked from the
    rendered file).
 4. Generated stub.
@@ -30,8 +30,8 @@ from cli_hub.registry import get_cli
 
 MATRIX_SKILL_DIR = Path.home() / ".cli-hub" / "matrix"
 
-# Base URL where deploy-pages.yml publishes cli-hub-matrix/ content (main only).
-MATRIX_CONTENT_BASE_URL = "https://hkuds.github.io/CLI-Anything/matrix"
+# Raw cli-hub-matrix/ content from this fork's main branch.
+MATRIX_CONTENT_BASE_URL = "https://raw.githubusercontent.com/mhdibrahimcn/CLI-Anything/main/cli-hub-matrix"
 
 # Package data dir bundled into wheels/sdists by cli-hub/setup.py.
 BUNDLED_MATRIX_DATA_DIR = Path(__file__).resolve().parent / "_matrix_data"

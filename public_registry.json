@@ -240,7 +240,7 @@
       "homepage": "https://github.com/charles-forsyth/generate-veo-video",
       "source_url": "https://github.com/charles-forsyth/generate-veo-video",
       "package_manager": "uv",
-      "install_cmd": "uv tool install git+https://github.com/charles-forsyth/generate-veo-video.git",
+      "install_cmd": "uv tool install git+https://github.com/charles-forsyth/generate-veo-video.git@cf99386e9c9a3a89dcccf3819d3b7ed11f13fb3e",
       "uninstall_cmd": "uv tool uninstall generate-veo-video",
       "update_cmd": "uv tool upgrade generate-veo-video",
       "skill_md": "https://github.com/charles-forsyth/generate-veo-video",
@@ -263,9 +263,9 @@
       "source_url": "https://github.com/slauger/suno-cli",
       "package_manager": "pip",
       "install_strategy": "command",
-      "install_cmd": "python3 -m pip install git+https://github.com/slauger/suno-cli.git",
+      "install_cmd": "python3 -m pip install git+https://github.com/slauger/suno-cli.git@ea78f7932bc8ac6fedfb1db29071db142842253c",
       "uninstall_cmd": "python3 -m pip uninstall -y suno-cli",
-      "update_cmd": "python3 -m pip install --upgrade --force-reinstall git+https://github.com/slauger/suno-cli.git",
+      "update_cmd": "python3 -m pip install --upgrade --force-reinstall git+https://github.com/slauger/suno-cli.git@ea78f7932bc8ac6fedfb1db29071db142842253c",
       "skill_md": "https://github.com/slauger/suno-cli/blob/main/docs/USAGE.md",
       "entry_point": "suno",
       "contributors": [
@@ -307,9 +307,8 @@
       "homepage": "https://jimeng.jianying.com/",
       "docs_url": "https://bytedance.larkoffice.com/wiki/FVTwwm0bGiishxkKOoScdHR2nsg",
       "source_url": null,
-      "package_manager": "script",
-      "install_strategy": "command",
-      "install_cmd": "curl -s https://jimeng.jianying.com/cli | bash",
+      "package_manager": "manual",
+      "install_strategy": "bundled",
       "skill_md": "https://bytedance.larkoffice.com/wiki/FVTwwm0bGiishxkKOoScdHR2nsg",
       "entry_point": "dreamina",
       "contributors": [
@@ -317,7 +316,8 @@
           "name": "ByteDance",
           "url": "https://www.bytedance.com"
         }
-      ]
+      ],
+      "install_notes": "Not auto-installed: the upstream installer is `curl https://jimeng.jianying.com/cli | bash`. Download that script, read it, and run it yourself if you trust it."
     },
     {
       "name": "obsidian-cli",
@@ -416,7 +416,7 @@
       "homepage": "https://www.esri.com/en-us/arcgis/products/arcgis-pro/overview",
       "source_url": "https://github.com/Jasper0122/CLI-Anything-Arcgis-Pro",
       "package_manager": "pip",
-      "install_cmd": "pip install git+https://github.com/Jasper0122/CLI-Anything-Arcgis-Pro.git@v0.1.0",
+      "install_cmd": "pip install git+https://github.com/Jasper0122/CLI-Anything-Arcgis-Pro.git@26a7d3e75fb8a06dc2a594826537d73d1ac27fba",
       "entry_point": "cli-anything-arcgis-pro",
       "skill_md": "https://github.com/Jasper0122/CLI-Anything-Arcgis-Pro/blob/v0.1.0/SKILL.md",
       "contributors": [
@@ -485,9 +485,9 @@
       "source_url": "https://github.com/Uname58/cdp-agent-kit",
       "package_manager": "pip",
       "install_strategy": "command",
-      "install_cmd": "pip install git+https://github.com/Uname58/cdp-agent-kit.git#subdirectory=contrib/cli-anything-harness/agent-harness",
+      "install_cmd": "pip install git+https://github.com/Uname58/cdp-agent-kit.git@9798e5228f4a55e524ee6f26ca77a22bbf3af2a5#subdirectory=contrib/cli-anything-harness/agent-harness",
       "uninstall_cmd": "pip uninstall -y cli-anything-browser-cdp",
-      "update_cmd": "pip install --upgrade --force-reinstall git+https://github.com/Uname58/cdp-agent-kit.git#subdirectory=contrib/cli-anything-harness/agent-harness",
+      "update_cmd": "pip install --upgrade --force-reinstall git+https://github.com/Uname58/cdp-agent-kit.git@9798e5228f4a55e524ee6f26ca77a22bbf3af2a5#subdirectory=contrib/cli-anything-harness/agent-harness",
       "skill_md": "https://raw.githubusercontent.com/Uname58/cdp-agent-kit/master/contrib/cli-anything-harness/agent-harness/SKILL.md",
       "entry_point": "cli-anything-browser-cdp",
       "contributors": [
@@ -506,7 +506,7 @@
       "requires": "Pieces OS running locally (http://localhost:39300)",
       "homepage": "https://pieces.app",
       "source_url": "https://github.com/goddardoven110907/cli-anything-pieces",
-      "install_cmd": "pip install git+https://github.com/goddardoven110907/cli-anything-pieces.git",
+      "install_cmd": "pip install git+https://github.com/goddardoven110907/cli-anything-pieces.git@a75ab13f439e563b03d33ea8ecee66b726b7606d",
       "entry_point": "cli-anything-pieces",
       "skill_md": "https://github.com/goddardoven110907/cli-anything-pieces/blob/master/README.md",
       "contributors": [

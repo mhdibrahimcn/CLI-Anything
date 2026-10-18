@@ -56,7 +56,7 @@ from cli_hub.installer import (
     _install_strategy,
     _UV_INSTALL_HINT,
 )
-from cli_hub.analytics import _is_enabled, track_event, track_install, track_uninstall as analytics_track_uninstall, track_visit, track_first_run, _detect_is_agent, detect_invocation_context
+from cli_hub.analytics import _is_enabled, track_event, track_install, track_uninstall as analytics_track_uninstall, track_visit, track_first_run, detect_invocation_context
 from cli_hub.cli import main
 
 
@@ -1124,7 +1124,7 @@ JIMENG_CLI = {
 
 
 class TestScriptStrategy:
-    """Tests for script/pipe-command installs (e.g. jimeng curl | bash)."""
+    """Tests for script/pipe-command installs. curl | bash style commands are refused."""
 
     # ── _install_strategy routing ──────────────────────────────────────
 
@@ -1140,18 +1140,28 @@ class TestScriptStrategy:
 
     # ── _run_command shell detection ───────────────────────────────────
 
+    @pytest.mark.parametrize("cmd", [
+        "curl -s https://jimeng.jianying.com/cli | bash",
+        "curl -fsSL https://x.example/i.sh | sh -s -- -v",
+        "wget -qO- https://x.example/i.sh | sudo -E bash -",
+        "curl https://x.example/i.py | python3",
+        "irm https://x.example/i.ps1 | iex",
+        "curl https://x.example/i.sh |/bin/zsh",
+    ])
     @patch("cli_hub.installer.subprocess.run")
-    def test_run_command_uses_shell_true_for_pipe(self, mock_run):
-        """Pipe character triggers shell=True so bash can interpret it."""
+    def test_run_command_refuses_pipe_to_interpreter(self, mock_run, cmd):
+        """Piping a download into a shell or interpreter is refused, not run."""
+        result = _run_command(cmd)
+        mock_run.assert_not_called()
+        assert result.returncode == 126
+        assert "Refusing" in result.stderr
+
+    @patch("cli_hub.installer.subprocess.run")
+    def test_run_command_allows_pipe_to_non_interpreter(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-        _run_command("curl -s https://jimeng.jianying.com/cli | bash")
+        _run_command("echo y | npm install -g some-cli")
         mock_run.assert_called_once()
-        _, kwargs = mock_run.call_args
-        assert kwargs.get("shell") is True
-        # cmd passed as a single string, not a list
-        args = mock_run.call_args[0][0]
-        assert isinstance(args, str)
-        assert "| bash" in args
+        assert mock_run.call_args.kwargs.get("shell") is True
 
     @patch("cli_hub.installer.subprocess.run")
     def test_run_command_uses_shell_false_for_simple_command(self, mock_run):
@@ -1173,36 +1183,16 @@ class TestScriptStrategy:
 
     @patch("cli_hub.installer.subprocess.run")
     @patch("cli_hub.installer.get_cli")
-    @patch("cli_hub.installer.INSTALLED_FILE", Path(tempfile.mktemp()))
-    def test_install_jimeng_success(self, mock_get_cli, mock_run):
-        """install_cli('jimeng') succeeds and invokes the pipe command via shell."""
+    def test_install_jimeng_is_refused(self, mock_get_cli, mock_run):
+        """install_cli('jimeng') never runs the curl|bash installer."""
         mock_get_cli.return_value = JIMENG_CLI
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
-        success, msg = install_cli("jimeng")
-
-        assert success, f"Expected success but got: {msg}"
-        assert "Jimeng" in msg
-
-        mock_run.assert_called_once()
-        _, kwargs = mock_run.call_args
-        assert kwargs.get("shell") is True
-        assert "| bash" in mock_run.call_args[0][0]
-
-    @patch("cli_hub.installer.subprocess.run")
-    @patch("cli_hub.installer.get_cli")
-    @patch("cli_hub.installer.INSTALLED_FILE", Path(tempfile.mktemp()))
-    def test_install_jimeng_failure_propagated(self, mock_get_cli, mock_run):
-        """A non-zero exit from the curl|bash script surfaces as failure."""
-        mock_get_cli.return_value = JIMENG_CLI
-        mock_run.return_value = MagicMock(
-            returncode=1, stdout="", stderr="curl: (6) Could not resolve host"
-        )
-
-        success, msg = install_cli("jimeng")
-
+        installed_file = Path(tempfile.mktemp())
+        with patch("cli_hub.installer.INSTALLED_FILE", installed_file):
+            success, msg = install_cli("jimeng")
         assert not success
-        assert "failed" in msg.lower()
+        assert "Refusing" in msg
+        mock_run.assert_not_called()
+        assert not installed_file.exists()
 
     @patch("cli_hub.installer.get_cli")
     def test_uninstall_jimeng_no_cmd_returns_graceful_message(self, mock_get_cli):
@@ -1215,250 +1205,40 @@ class TestScriptStrategy:
         # Should mention the CLI name or explain no command available — never crash
         assert msg
 
-    @patch("cli_hub.installer.subprocess.run")
-    @patch("cli_hub.installer.get_cli")
-    @patch("cli_hub.installer.INSTALLED_FILE", Path(tempfile.mktemp()))
-    def test_install_jimeng_recorded_in_installed_json(self, mock_get_cli, mock_run):
-        """After a successful install, jimeng appears in installed.json."""
-        installed_file = Path(tempfile.mktemp())
-        mock_get_cli.return_value = JIMENG_CLI
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
-        with patch("cli_hub.installer.INSTALLED_FILE", installed_file):
-            success, _ = install_cli("jimeng")
-            assert success
-            data = json.loads(installed_file.read_text())
-            assert "jimeng" in data
-            assert data["jimeng"]["strategy"] == "command"
-            assert data["jimeng"]["package_manager"] == "script"
-
 # ─── Analytics tests ──────────────────────────────────────────────────
 
 
 class TestAnalytics:
-    """Tests for analytics.py — opt-out, event firing, event names."""
+    """This fork sends no usage data: every tracker is a no-op."""
 
-    def test_analytics_enabled_by_default(self):
-        with patch.dict(os.environ, {}, clear=True):
-            assert _is_enabled()
-
-    def test_analytics_disabled_by_env(self):
-        with patch.dict(os.environ, {"CLI_HUB_NO_ANALYTICS": "1"}):
-            assert not _is_enabled()
-
-    def test_analytics_disabled_by_true(self):
-        with patch.dict(os.environ, {"CLI_HUB_NO_ANALYTICS": "true"}):
-            assert not _is_enabled()
-
-    @patch("cli_hub.analytics._send_event")
-    def test_track_event_sends_request(self, mock_send):
+    @patch("requests.post")
+    @patch("requests.get")
+    def test_trackers_never_touch_network(self, mock_get, mock_post):
         with patch.dict(os.environ, {}, clear=True):
             track_event("test-event", data={"key": "value"})
-            import time
-            time.sleep(0.2)
-            mock_send.assert_called_once()
-            payload = mock_send.call_args[0][0]
-            assert payload["event"] == "test-event"
-            assert payload["properties"]["hostname"] == "clianything.cc"
-            assert payload["properties"]["source"] == "cli"
-
-    @patch("cli_hub.analytics._send_event")
-    def test_track_event_noop_when_disabled(self, mock_send):
-        with patch.dict(os.environ, {"CLI_HUB_NO_ANALYTICS": "1"}):
-            track_event("test-event")
-            import time
-            time.sleep(0.2)
-            mock_send.assert_not_called()
-
-    @patch("cli_hub.analytics._send_event")
-    def test_track_event_supports_umami_provider(self, mock_send):
-        with patch.dict(os.environ, {"CLI_HUB_ANALYTICS_PROVIDER": "umami"}, clear=False):
-            track_event("test-event")
-            import time
-            time.sleep(0.2)
-            mock_send.assert_called_once()
-            payload = mock_send.call_args[0][0]
-            assert payload["payload"]["name"] == "test-event"
-            assert payload["payload"]["hostname"] == "clianything.cc"
-
-    @patch("cli_hub.analytics._send_event")
-    def test_track_install_event_name_is_flat(self, mock_send):
-        """cli-install event name is static; CLI name lives in properties.cli."""
-        with patch.dict(os.environ, {}, clear=True):
             track_install("gimp", "1.0.0")
-            import time
-            time.sleep(0.2)
-            mock_send.assert_called_once()
-            payload = mock_send.call_args[0][0]
-            assert payload["event"] == "cli-install"
-            assert payload["properties"]["$current_url"] == "https://clianything.cc/cli-anything-hub/install/gimp"
-            assert payload["properties"]["cli"] == "gimp"
-            assert payload["properties"]["version"] == "1.0.0"
-            assert "platform" in payload["properties"]
-
-    @patch("cli_hub.analytics._send_event")
-    def test_track_uninstall_event_name_is_flat(self, mock_send):
-        """cli-uninstall event name is static; CLI name lives in properties.cli."""
-        with patch.dict(os.environ, {}, clear=True):
             analytics_track_uninstall("blender")
-            import time
-            time.sleep(0.2)
-            mock_send.assert_called_once()
-            payload = mock_send.call_args[0][0]
-            assert payload["event"] == "cli-uninstall"
-            assert payload["properties"]["$current_url"] == "https://clianything.cc/cli-anything-hub/uninstall/blender"
-            assert payload["properties"]["cli"] == "blender"
-            assert "platform" in payload["properties"]
-
-    @patch("cli_hub.analytics._send_event")
-    def test_track_launch_fires(self, mock_send):
-        """cli-launch event fires with the CLI name in properties."""
-        from cli_hub.analytics import track_launch
-        with patch.dict(os.environ, {}, clear=True):
-            track_launch("gimp")
-            import time
-            time.sleep(0.2)
-            mock_send.assert_called_once()
-            payload = mock_send.call_args[0][0]
-            assert payload["event"] == "cli-launch"
-            assert payload["properties"]["cli"] == "gimp"
-            assert payload["properties"]["$current_url"] == "https://clianything.cc/cli-anything-hub/launch/gimp"
-
-    @patch("cli_hub.analytics._send_event")
-    def test_track_visit_human(self, mock_send):
-        """cli-hub call event sent when not detected as agent."""
-        with patch.dict(os.environ, {}, clear=True):
-            track_visit(is_agent=False)
-            import time
-            time.sleep(0.2)
-            mock_send.assert_called_once()
-            payload = mock_send.call_args[0][0]
-            assert payload["event"] == "cli-hub call"
-            assert payload["properties"]["$current_url"] == "https://clianything.cc/cli-anything-hub/call"
-            assert payload["properties"]["command"] == "root"
-            assert payload["properties"]["is_agent"] is False
-            assert payload["properties"]["traffic_type"] == "human"
-
-    @patch("cli_hub.analytics._send_event")
-    def test_track_visit_agent(self, mock_send):
-        """cli-hub call event captures the agent flag."""
-        with patch.dict(os.environ, {}, clear=True):
             track_visit(is_agent=True, command="--version")
-            import time
-            time.sleep(0.2)
-            mock_send.assert_called_once()
-            payload = mock_send.call_args[0][0]
-            assert payload["event"] == "cli-hub call"
-            assert payload["properties"]["command"] == "--version"
-            assert payload["properties"]["is_agent"] is True
-            assert payload["properties"]["traffic_type"] == "agent"
-
-    def test_detect_agent_claude_code(self):
-        with patch.dict(os.environ, {"CLAUDE_CODE": "1"}):
-            assert _detect_is_agent() is True
-
-    def test_detect_agent_codex(self):
-        with patch.dict(os.environ, {"CODEX": "1"}):
-            assert _detect_is_agent() is True
-
-    @patch("cli_hub.analytics._parent_process_commands", return_value=["/usr/local/bin/codex --run"])
-    def test_detect_agent_from_parent_process(self, mock_cmds):
-        with patch.dict(os.environ, {}, clear=True):
-            context = detect_invocation_context()
-            assert context["is_agent"] is True
-            assert context["reason"] == "codex-process"
-            assert "codex-process" in context["signals"]
-
-    @pytest.mark.parametrize(
-        ("command", "expected_reason"),
-        [
-            ("/usr/local/bin/gemini --prompt fix tests", "gemini-process"),
-            ("/usr/local/bin/copilot agent", "copilot-process"),
-            ("/usr/local/bin/auggie --print review", "auggie-process"),
-            ("/opt/augment/bin/augment", "augment-process"),
-            ("/usr/local/bin/ampcode fix build", "amp-process"),
-            ("/usr/local/bin/opencode agent create", "opencode-process"),
-            ("/usr/local/bin/kilo auth", "kilo-process"),
-            ("/usr/local/bin/qodo chat", "qodo-process"),
-            ("/usr/local/bin/kiro /agent create", "kiro-process"),
-        ],
-    )
-    @patch("cli_hub.analytics._parent_process_commands")
-    def test_detect_agent_from_expanded_parent_process_names(self, mock_cmds, command, expected_reason):
-        mock_cmds.return_value = [command]
-        with patch.dict(os.environ, {}, clear=True):
-            context = detect_invocation_context()
-            assert context["is_agent"] is True
-            assert context["reason"] == expected_reason
-            assert expected_reason in context["signals"]
-
-    @patch("cli_hub.analytics._parent_process_commands", return_value=[])
-    def test_detect_not_agent_clean_env(self, mock_cmds):
-        """Clean env with a tty should not detect as agent."""
-        with patch.dict(os.environ, {}, clear=True):
-            with patch("sys.stdin") as mock_stdin:
-                mock_stdin.isatty.return_value = True
-                assert _detect_is_agent() is False
-
-    @patch("cli_hub.analytics._parent_process_commands", return_value=[])
-    def test_detect_non_tty_is_agent(self, mock_cmds):
-        with patch.dict(os.environ, {}, clear=True):
-            with patch("sys.stdin") as mock_stdin:
-                mock_stdin.isatty.return_value = False
-                context = detect_invocation_context()
-                assert context["is_agent"] is True
-                assert context["traffic_type"] == "agent"
-                assert context["category"] == "scripted_client"
-                assert context["reason"] == "stdin-not-tty"
-
-    @patch("cli_hub.analytics._send_event")
-    def test_track_visit_uses_detection_context(self, mock_send):
-        detection = {
-            "is_agent": True,
-            "traffic_type": "agent",
-            "category": "agent_tool",
-            "reason": "codex-process",
-            "signals": ["codex-process", "stdin-not-tty"],
-            "stdin_tty": False,
-            "is_interactive": False,
-        }
-        with patch.dict(os.environ, {}, clear=True):
-            track_visit(command="search", detection=detection)
-            import time
-            time.sleep(0.2)
-            payload = mock_send.call_args[0][0]
-            assert payload["properties"]["command"] == "search"
-            assert payload["properties"]["agent_reason"] == "codex-process"
-            assert payload["properties"]["agent_category"] == "agent_tool"
-            assert payload["properties"]["agent_signals"] == ["codex-process", "stdin-not-tty"]
-            assert payload["properties"]["stdin_tty"] is False
-            assert payload["properties"]["is_interactive"] is False
-
-    @patch("cli_hub.analytics._send_event")
-    def test_first_run_sends_event(self, mock_send, tmp_path):
-        """First invocation sends cli-hub-installed event."""
-        with patch.dict(os.environ, {"HOME": str(tmp_path)}, clear=False):
             track_first_run()
-            import time
-            time.sleep(0.2)
-            mock_send.assert_called_once()
-            payload = mock_send.call_args[0][0]
-            assert payload["event"] == "cli-anything-hub-installed"
-            assert payload["properties"]["$current_url"] == "https://clianything.cc/cli-anything-hub/installed"
-            # Marker file should now exist
-            assert (tmp_path / ".cli-hub" / ".first_run_sent").exists()
+        mock_get.assert_not_called()
+        mock_post.assert_not_called()
 
-    @patch("cli_hub.analytics._send_event")
-    def test_first_run_skips_if_marker_exists(self, mock_send, tmp_path):
-        """Second invocation does NOT send cli-hub-installed event."""
-        cli_hub_dir = tmp_path / ".cli-hub"
-        cli_hub_dir.mkdir()
-        (cli_hub_dir / ".first_run_sent").write_text("0.1.0")
-        with patch.dict(os.environ, {"HOME": str(tmp_path)}, clear=False):
+    def test_disabled_regardless_of_env(self):
+        with patch.dict(os.environ, {"CLI_HUB_NO_ANALYTICS": ""}, clear=False):
+            assert _is_enabled() is False
+
+    def test_first_run_writes_no_marker(self, tmp_path):
+        with patch("pathlib.Path.home", return_value=tmp_path):
             track_first_run()
-            import time
-            time.sleep(0.2)
-            mock_send.assert_not_called()
+        assert not (tmp_path / ".cli-hub").exists()
+
+    @patch("subprocess.run")
+    def test_detection_does_not_inspect_processes(self, mock_run):
+        context = detect_invocation_context()
+        assert context["signals"] == []
+        mock_run.assert_not_called()
+
+
 
 
 # ─── CLI tests ─────────────────────────────────────────────────────────

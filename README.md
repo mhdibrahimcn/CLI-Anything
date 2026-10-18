@@ -1814,5 +1814,4 @@ Apache License 2.0 — free to use, modify, and distribute.
 
 <p align="center">
   <em> Thanks for visiting ✨ CLI-Anything!</em><br><br>
-  <img src="https://visitor-badge.laobi.icu/badge?page_id=HKUDS.CLI-Anything&style=for-the-badge&color=00d4ff" alt="Views">
 </p>

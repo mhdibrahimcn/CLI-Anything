@@ -1,7 +1,7 @@
 ---
 name: cli-hub-meta-skill
 description: >-
-  Discover agent-native CLIs for professional software. Access the live catalog
+  Discover agent-native CLIs for professional software. Browse the catalog
   to find tools for creative workflows, productivity, AI, and more.
 ---
 
@@ -57,14 +57,11 @@ every matrix subcommand; exit codes are `0` ok · `3` partial/gaps · `1` failur
 and audit an install with `cli-hub matrix doctor <name>`.
 
 
-## Live Catalog
+## Catalog
 
-**URL**: [`https://reeceyang.sgp1.cdn.digitaloceanspaces.com/SKILL.md`](https://reeceyang.sgp1.cdn.digitaloceanspaces.com/SKILL.md)
-
-The catalog is auto-updated and provides:
-- Full list of available CLIs organized by category
-- One-line `cli-hub install` commands for each tool
-- Complete descriptions and usage patterns
+Run `cli-hub list` or `cli-hub search <query>` to browse available CLIs.
+The raw catalog is [`registry.json`](https://raw.githubusercontent.com/mhdibrahimcn/CLI-Anything/main/registry.json) and
+[`public_registry.json`](https://raw.githubusercontent.com/mhdibrahimcn/CLI-Anything/main/public_registry.json) in this fork.
 
 
 ## What Can You Do?
@@ -110,6 +107,6 @@ cli-anything-kdenlive --json project create --name my-project
 
 ## More Info
 
-- Live Catalog: https://reeceyang.sgp1.cdn.digitaloceanspaces.com/SKILL.md
+- Catalog: https://raw.githubusercontent.com/mhdibrahimcn/CLI-Anything/main/registry.json
 - Web Hub: https://clianything.cc
 - Repository: https://github.com/HKUDS/CLI-Anything

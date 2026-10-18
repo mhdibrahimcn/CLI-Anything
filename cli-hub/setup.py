@@ -61,7 +61,7 @@ setup(
         "Homepage": "https://clianything.cc",
         "Repository": "https://github.com/HKUDS/CLI-Anything",
         "Bug Tracker": "https://github.com/HKUDS/CLI-Anything/issues",
-        "Catalog": "https://reeceyang.sgp1.cdn.digitaloceanspaces.com/SKILL.md",
+        "Catalog": "https://raw.githubusercontent.com/mhdibrahimcn/CLI-Anything/main/registry.json",
     },
     license="MIT",
     packages=find_packages(exclude=["tests", "tests.*"]),

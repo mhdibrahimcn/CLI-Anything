@@ -1,6 +1,7 @@
 """Install, uninstall, and manage CLIs and matrices."""
 
 import json
+import re
 import shlex
 import shutil
 import subprocess
@@ -66,14 +67,31 @@ _UV_INSTALL_HINT = (
 
 _SHELL_METACHARACTERS = ("|", "&&", "||", ";", "$(", "`")
 
+# Piping downloaded content into an interpreter runs unreviewed remote code.
+_PIPE_TO_INTERPRETER = re.compile(
+    r"\|\s*(?:sudo\s+(?:-\S+\s+)*)?"
+    r"(?:\S*/)?(?:ba|z|da|k|fi)?sh\b|\|\s*(?:\S*/)?(?:python3?|perl|ruby|node|iex|pwsh|powershell)\b",
+    re.IGNORECASE,
+)
+
 
 def _run_command(cmd):
     """Run a command string.
 
-    Uses shell=True when the command contains shell operators (pipes, &&, etc.)
-    so that script-type installs like ``curl … | bash`` work correctly.
-    Commands come from the trusted registry, not from user input.
+    Uses shell=True when the command contains shell operators (pipes, &&, etc.).
+    Refuses commands that pipe into a shell or interpreter (``curl … | bash``).
     """
+    if _PIPE_TO_INTERPRETER.search(cmd):
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=126,
+            stdout="",
+            stderr=(
+                "Refusing to pipe a download into a shell or interpreter:\n"
+                f"  {cmd}\n"
+                "Download the script, read it, and run it yourself if you trust it."
+            ),
+        )
     use_shell = any(c in cmd for c in _SHELL_METACHARACTERS)
     try:
         return subprocess.run(

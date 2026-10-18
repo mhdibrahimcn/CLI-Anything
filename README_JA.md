@@ -916,5 +916,4 @@ Apache License 2.0 — 自由に使用、変更、配布できます。
 
 <p align="center">
   <em> CLI-Anythingをご覧いただきありがとうございます ✨</em><br><br>
-  <img src="https://visitor-badge.laobi.icu/badge?page_id=HKUDS.CLI-Anything&style=for-the-badge&color=00d4ff" alt="Views">
 </p>

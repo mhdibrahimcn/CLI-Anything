@@ -2692,7 +2692,7 @@
       const pendingPosthogEvents = [];
 
       function isTrackedHost() {
-        return COUNTED_HOSTS.has(location.hostname);
+        return false; // tracking disabled in this fork
       }
 
       function applyVisitorStats(stats) {

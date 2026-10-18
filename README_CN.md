@@ -1108,5 +1108,4 @@ Apache License 2.0 — 可自由使用、修改和分发。
 
 <p align="center">
   <em>感谢访问 ✨ CLI-Anything！</em><br><br>
-  <img src="https://visitor-badge.laobi.icu/badge?page_id=HKUDS.CLI-Anything&style=for-the-badge&color=00d4ff" alt="Views">
 </p>

@@ -106,16 +106,10 @@ cli-hub search blender --json
 
 ## Analytics
 
-cli-hub sends anonymous usage events to help track adoption. The default provider is [PostHog](https://posthog.com), while the legacy Umami path remains available via `CLI_HUB_ANALYTICS_PROVIDER=umami`. No personal data is collected.
-
-Opt out:
-
-```bash
-export CLI_HUB_NO_ANALYTICS=1
-```
+This fork sends no usage data. The upstream PostHog/Umami tracking has been removed.
 
 ## Links
 
 - **Web Hub**: [clianything.cc](https://clianything.cc)
 - **Repository**: [github.com/HKUDS/CLI-Anything](https://github.com/HKUDS/CLI-Anything)
-- **Live Catalog**: [SKILL.md](https://reeceyang.sgp1.cdn.digitaloceanspaces.com/SKILL.md)
+- **Catalog**: [registry.json](https://raw.githubusercontent.com/mhdibrahimcn/CLI-Anything/main/registry.json)

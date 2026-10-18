@@ -10,7 +10,7 @@ from pathlib import Path
 
 import requests
 
-MATRIX_REGISTRY_URL = "https://hkuds.github.io/CLI-Anything/matrix_registry.json"
+MATRIX_REGISTRY_URL = "https://raw.githubusercontent.com/mhdibrahimcn/CLI-Anything/main/matrix_registry.json"
 MATRIX_CACHE_FILE = Path.home() / ".cli-hub" / "matrix_registry_cache.json"
 CACHE_TTL = 3600  # 1 hour
 
